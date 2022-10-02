@@ -90,11 +90,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
    }
 }
 
-///idt stands for InterruptDescriptorTable
+///idt stands for `InterruptDescriptorTable`
 pub fn init_idt() { IDT.load(); }
 
 #[test_case]
-fn test_brewkpoint_exception() {
+fn test_breakpoint_exception() {
    //invoke a breakpoint exception
    x86_64::instructions::interrupts::int3();
 }
