@@ -1,5 +1,8 @@
 //!implement for vga buffer
-use {core::fmt, lazy_static::lazy_static, spin::Mutex, volatile::Volatile};
+use core::fmt;
+use lazy_static::lazy_static;
+use spin::Mutex;
+use volatile::Volatile;
 
 lazy_static! {
    pub static ref WRITER: Mutex<Writer,> = Mutex::new(Writer {
@@ -27,7 +30,10 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments,) {
    use core::fmt::Write;
-   WRITER.lock().write_fmt(args,).unwrap();
+   use x86_64::instructions::interrupts;
+   interrupts::without_interrupts(|| {
+      WRITER.lock().write_fmt(args,).unwrap();
+   },);
 }
 
 #[allow(dead_code)]

@@ -6,6 +6,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
+use tiny_os::hlt_loop;
 use tiny_os::println;
 
 static HELLO: &str = "hell on world, see you dream";
@@ -16,18 +17,12 @@ pub extern "C" fn _start() -> ! {
    println!("{}", HELLO);
 
    tiny_os::init();
-   fn stack_overflow() {
-      //for each recursion, the return address is pushed
-      stack_overflow();
-   }
-
-   stack_overflow();
 
    #[cfg(test)]
    test_main();
 
    println!("didn't crash!");
-   loop {}
+   hlt_loop();
 }
 
 ///This `fn` is called on panic
@@ -35,7 +30,7 @@ pub extern "C" fn _start() -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo,) -> ! {
    println!("{}", info);
-   loop {}
+   hlt_loop();
 }
 
 #[cfg(test)]
