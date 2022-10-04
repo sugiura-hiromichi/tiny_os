@@ -5,18 +5,61 @@
 #![test_runner(tiny_os::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+extern crate alloc;
+
+use alloc::boxed::Box;
+use alloc::rc::Rc;
+use alloc::vec;
+use alloc::vec::Vec;
+use bootloader::entry_point;
+use bootloader::BootInfo;
 use core::panic::PanicInfo;
 use tiny_os::hlt_loop;
 use tiny_os::println;
 
 static HELLO: &str = "hell on world, see you dream";
 
-///this `fn` is the entry point, since the linker looks for a `fn` named `_start` by default
-#[no_mangle] //don't mangle the name of this `fn`
-pub extern "C" fn _start() -> ! {
-   println!("{}", HELLO);
+entry_point!(kernel_main);
 
+///This `fn` is entry point of our kernel.
+///By using bootloader::entry_point!, we can name arbitrarily.
+///
+///# Define
+///
+///```rust
+/// entry_point!(kernel_main);
+/// ```
+fn kernel_main(boot_info: &'static BootInfo,) -> ! {
+   println!("{}", HELLO);
    tiny_os::init();
+
+   use tiny_os::allocator;
+   use tiny_os::memory;
+   use tiny_os::memory::BootInfoFrameAllocator;
+   use x86_64::VirtAddr;
+
+   let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset,);
+   let mut mapper = unsafe { memory::init(phys_mem_offset,) };
+   let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map,) };
+
+   //allocate value to heap
+   allocator::init_heap(&mut mapper, &mut frame_allocator,).expect("heap inititalization failed",);
+   let heap_value = Box::new(44,);
+   println!("heap_value at {:p}", heap_value);
+
+   //create dynamic sized vector
+   let mut vec = Vec::new();
+   for i in 0..500 {
+      vec.push(i,);
+   }
+   println!("vec at {:p}", vec.as_slice());
+
+   //create reference counted vector -> free if reference count become 0
+   let reference_counted = Rc::new(vec![1, 2, 3],);
+   let cloned_reference = reference_counted.clone();
+   println!("current reference count is {}", Rc::strong_count(&cloned_reference));
+   core::mem::drop(reference_counted,);
+   println!("reference count is {} now", Rc::strong_count(&cloned_reference));
 
    #[cfg(test)]
    test_main();
